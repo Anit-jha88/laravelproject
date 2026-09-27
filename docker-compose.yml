@@ -1,0 +1,70 @@
+services:
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: laravel-app
+    restart: unless-stopped
+
+    ports:
+      - "8080:80"
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: online_exam
+      DB_USERNAME: root
+      DB_PASSWORD: ""
+
+    networks:
+      - laravel-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: laravel-mysql
+    restart: unless-stopped
+
+    environment:
+      MYSQL_DATABASE: online_exam
+      MYSQL_ROOT_PASSWORD: ""
+
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+    networks:
+      - laravel-network
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-uroot"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+
+volumes:
+  mysql_data:
+
+
+networks:
+  laravel-network:
+    driver: bridge
