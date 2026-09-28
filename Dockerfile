@@ -1,83 +1,45 @@
-# =========================
-# Stage 1: Build frontend
-# =========================
-FROM node:22-alpine AS frontend
-
-WORKDIR /app
-
-COPY package*.json ./
-
-RUN npm install
-
-COPY . .
-
-RUN npm run build
-
-
-# =========================
-# Stage 2: Laravel + Apache
-# =========================
 FROM php:8.3-apache
 
 WORKDIR /var/www/html
 
-# System dependencies
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
+    curl \
     libzip-dev \
-    libpng-dev \
-    libonig-dev \
-    libxml2-dev \
-    libicu-dev \
-    && docker-php-ext-install \
-        pdo_mysql \
-        mbstring \
-        exif \
-        pcntl \
-        bcmath \
-        gd \
-        zip \
-        intl \
+    && docker-php-ext-install pdo_mysql zip \
     && rm -rf /var/lib/apt/lists/*
 
-# Enable Apache rewrite
-RUN a2enmod rewrite
+# Node.js + npm
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs
 
-# Install Composer
+# Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Copy Laravel application
+# Apache rewrite
+RUN a2enmod rewrite
+
 COPY . .
 
-# Install PHP dependencies
-RUN composer install \
-    --no-interaction \
-    --prefer-dist \
-    --optimize-autoloader \
-    --no-dev
+RUN composer install --no-dev --optimize-autoloader
 
-# Copy Vite production build
-COPY --from=frontend /app/public/build ./public/build
+RUN npm install
+RUN npm run build
 
-# Apache configuration
-RUN printf '%s\n' \
-    '<VirtualHost *:80>' \
-    '    DocumentRoot /var/www/html/public' \
-    '    <Directory /var/www/html/public>' \
-    '        AllowOverride All' \
-    '        Require all granted' \
-    '    </Directory>' \
-    '    ErrorLog ${APACHE_LOG_DIR}/error.log' \
-    '    CustomLog ${APACHE_LOG_DIR}/access.log combined' \
-    '</VirtualHost>' \
-    > /etc/apache2/sites-available/000-default.conf
+# Laravel Apache configuration
+RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' \
+    /etc/apache2/sites-available/000-default.conf \
+    /etc/apache2/apache2.conf
 
-# Laravel permissions
+# Allow Laravel public directory
+RUN printf '<Directory /var/www/html/public>\n\
+    AllowOverride All\n\
+    Require all granted\n\
+</Directory>\n' > /etc/apache2/conf-available/laravel.conf \
+    && a2enconf laravel
+
 RUN chown -R www-data:www-data /var/www/html/storage \
-    /var/www/html/bootstrap/cache
-
-RUN chmod -R 775 /var/www/html/storage \
     /var/www/html/bootstrap/cache
 
 EXPOSE 80
