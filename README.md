@@ -58,7 +58,10 @@ cp .env.example .env
 ```
 
 Set database in `.env`:
-
+nano .env
+CTRL + O
+ENTER
+CTRL + X
 ```env
 APP_ENV=production
 APP_DEBUG=false
