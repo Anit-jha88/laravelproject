@@ -4,6 +4,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+
     container_name: laravel-app
     restart: unless-stopped
 
@@ -13,6 +14,9 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+
+    env_file:
+      - .env
 
     environment:
       APP_ENV: production
@@ -36,7 +40,6 @@ services:
     environment:
       MYSQL_DATABASE: online_exam
       MYSQL_ROOT_PASSWORD: ""
-
       MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
 
     volumes:
@@ -60,10 +63,8 @@ services:
       retries: 10
       start_period: 30s
 
-
 volumes:
   mysql_data:
-
 
 networks:
   laravel-network:
