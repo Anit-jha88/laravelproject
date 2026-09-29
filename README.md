@@ -1,6 +1,6 @@
 # Laravel Online Exam - Docker
 
-Laravel Online Exam application using:
+Laravel Online Exam application using: 
 
 * Laravel
 * PHP 8.3
